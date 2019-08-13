@@ -2,10 +2,18 @@ package facility
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/fatih/color"
 )
+
+// DataBase ...
+type DataBase struct {
+	Facilities []Facility `json:"facilities"`
+}
 
 // Facility ...
 type Facility struct {
@@ -15,11 +23,6 @@ type Facility struct {
 	Features []string    `json:"features"`
 	Address  interface{} `json:"address"`
 	IPRanges []string    `json:"ip_ranges"`
-}
-
-// DataBase ...
-type DataBase struct {
-	Facilities []Facility `json:"facilities"`
 }
 
 // GetFacilities ...
@@ -35,6 +38,12 @@ func GetFacilities(c *http.Client, token, url string) DataBase {
 	resp, respErr := c.Do(req)
 	if respErr != nil {
 		log.Fatalln(respErr)
+	}
+
+	if resp.StatusCode < 300 {
+		fmt.Println("HTTP Response Status for", color.BlueString("Facility"), "GET:", resp.StatusCode, color.GreenString(http.StatusText(resp.StatusCode)))
+	} else {
+		fmt.Println("HTTP Response Status for", color.BlueString("Facility"), "GET:", resp.StatusCode, color.RedString(http.StatusText(resp.StatusCode)))
 	}
 
 	defer resp.Body.Close()

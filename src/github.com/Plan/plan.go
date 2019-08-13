@@ -2,9 +2,12 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/fatih/color"
 )
 
 // GetPlans ...
@@ -20,6 +23,12 @@ func GetPlans(c *http.Client, token, url string) DataBase {
 	resp, respErr := c.Do(req)
 	if respErr != nil {
 		log.Fatalln(respErr)
+	}
+
+	if resp.StatusCode < 300 {
+		fmt.Println("HTTP Response Status for", color.BlueString("Plan"), "GET:", resp.StatusCode, color.GreenString(http.StatusText(resp.StatusCode)))
+	} else {
+		fmt.Println("HTTP Response Status for", color.BlueString("Plan"), "GET:", resp.StatusCode, color.RedString(http.StatusText(resp.StatusCode)))
 	}
 
 	defer resp.Body.Close()
