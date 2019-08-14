@@ -9,14 +9,14 @@ AUTHTOKEN=<API auth token>
 PROJID=<Project ID>
 ```
 
-# After cloning repo
+## After cloning repo
 Go to the scripts directory and run
 ```bash
 ./install.sh
 ```
 to install the dependencies and install all of the packages.
 
-# After installation
+## After installation
 You can run the binary 
  ```binary
  main
