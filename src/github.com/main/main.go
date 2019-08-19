@@ -1,111 +1,193 @@
+// Package will get the environment variables for http requests to the API and start the device that will host the server.
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/device"
 	"github.com/fatih/color"
+	"github.com/gorilla/mux"
+	"github.com/ip"
 )
 
-/**
- * Environment variables
- * rootURL - api.packet.net
- * userToken - API auth token
- * projID - the id of the project
- */
-var rootURL = ""
-var userToken = ""
-var projID = ""
+// Variables used for API requests
+var (
+	rootURL   = os.Getenv("ROOTURL")
+	userToken = os.Getenv("AUTHTOKEN")
+	projID    = os.Getenv("PROJECTUUID")
+)
 
-/**
- * Will get the environment variables for the project.
- * API Authentication Token
- * Project UUID
- */
-func initEnvVariables() {
+// Verify if the environment variables were set
+func init() {
 	// Get the Root URL.
-	fmt.Println("Checking for Root URL...")
-	url, urlInit := os.LookupEnv("ROOTURL")
-	if !urlInit {
+	fmt.Print("Checking for Root URL... ")
+	if rootURL == "" {
 		log.Fatalln(color.RedString("No Root URL present"))
 	}
-	rootURL = url
-	fmt.Println(color.GreenString("Received Root URL"))
+	fmt.Println(color.GreenString("Initialized"))
 
 	// Get the authorization token.
-	fmt.Println("Checking for Auth Token...")
-	authToken, tokenInit := os.LookupEnv("AUTHTOKEN")
-	if !tokenInit {
+	fmt.Print("Checking for Auth Token... ")
+	if userToken == "" {
 		log.Fatalln(color.RedString("No Auth token present"))
 	}
-	userToken = authToken
-	fmt.Println(color.GreenString("Received Auth Token"))
+	fmt.Println(color.GreenString("Initialized"))
 
 	// Get the project uuid.
-	fmt.Println("Checking for Project ID...")
-	id, idInit := os.LookupEnv("PROJECTUUID")
-	if !idInit {
+	fmt.Print("Checking for Project ID... ")
+	if projID == "" {
 		log.Fatalln(color.RedString("No Project ID present"))
 	}
-	projID = id
-	fmt.Println(color.GreenString("Received Project UUID"))
+	fmt.Println(color.GreenString("Initialized"))
+}
+
+func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool, cli chan *http.Client, devID chan string) {
+
+	<-sigs
+	c := <-cli
+	dID := <-devID
+	s := <-srv
+	fmt.Println()
+	fmt.Println("Graceful Shutdown Started...")
+
+	// We received an interrupt signal, shut down.
+	if err := s.Shutdown(context.Background()); err != nil {
+		// Error from closing listeners, or context timeout:
+		log.Printf("HTTP server Shutdown: %v", err)
+	}
+
+	d := device.Retrieve(c, userToken, rootURL, dID)
+
+	// If the device is active, power it off, else, do nothing.
+	if d.State == "active" {
+
+		log.Println(color.BlueString("Powering device off..."))
+		device.ChangeState(c, userToken, rootURL, dID, "TurnOff")
+
+		// Check for the device to be inactive every 5 seconds.
+		duration := time.Duration(5) * time.Second
+		for d.State != "inactive" {
+			time.Sleep(duration)
+			d = device.Retrieve(c, userToken, rootURL, dID)
+		}
+	}
+
+	fmt.Println(color.RedString("Device inactive"))
+	done <- true
+}
+
+func getDevice(c *http.Client, id chan string) device.Device {
+
+	// Get all of the Devices in the project.
+	log.Println("Getting all devices in project.")
+	deviceList := device.RetrieveDevices(c, userToken, rootURL, projID)
+	if len(deviceList.Devices) == 0 {
+		log.Fatalln(color.RedString("There are no devices available."))
+	}
+
+	// Seclect device to power on, channels device.ID to gracefulShutDown()
+	log.Println("Getting device ID")
+	devID := deviceList.Devices[0].ID
+	id <- devID
+	fmt.Println("Device ID: ", devID)
+
+	/**
+	 * Get the device that'll be used as the server and turn it on
+	 * if it's not already active.
+	 */
+	d := device.Retrieve(c, userToken, rootURL, devID)
+	active := device.CheckState(d)
+	if !active {
+		fmt.Println(color.BlueString("Powering on device..."))
+		stateChanged := device.ChangeState(c, userToken, rootURL, devID, "TurnOn")
+		if !stateChanged {
+			log.Fatalln(color.RedString("Turn on device incomplete."))
+		}
+
+		// Check for the device to be active every 5 seconds.
+		duration := time.Duration(5) * time.Second
+		for d.State != "active" {
+			time.Sleep(duration)
+			d = device.Retrieve(c, userToken, rootURL, devID)
+		}
+
+		log.Println(color.GreenString("Device Active"))
+	}
+
+	return *d
+}
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, "This is test")
 }
 
 func main() {
+
 	// Saying hello!
 	fmt.Println(color.YellowString("Hello Packet!!!"))
 
-	//Initialize Environment variables.
-	initEnvVariables()
+	// Create channels for graceful shutdown
+	sigs := make(chan os.Signal, 1)
+	srv := make(chan *http.Server, 1)
+	done := make(chan bool, 1)
+	c := make(chan *http.Client, 1)
+	id := make(chan string, 1)
 
-	// Create new HTTP client
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	/**
+	* Create a new router and a new HTTP client/Server.
+	* Channels client into gracefulShutDown()
+	 */
+	r := mux.NewRouter()
 	client := &http.Client{}
+	server := &http.Server{
+		Addr:    ":80",
+		Handler: r}
+	c <- client
+	srv <- server
 
-	// Get all of the Devices in the project.
-	deviceList := device.RetrieveDevices(client, userToken, rootURL+"/projects/"+projID+"/devices")
-	ipv4Addr := net.ParseIP(deviceList.Devices[0].IPAddresses[0].Address)
-	fmt.Println(ipv4Addr)
+	go gracefulShutDown(sigs, srv, done, c, id)
 
-	/**
-	 * Use the HTTP Client and authentication token
-	 * to get the available operating systems.
-	 */
-	// osData := packetos.GetOSes(client, userToken, rootURL+"/operating-systems")
-	// fmt.Println(osData.OSes[0].Name)
+	//Index page
+	r.HandleFunc("/QualenPollard", indexHandler)
 
-	/**
-	 * Use the HTTP Client and authentication token
-	 * to get the available facilities.
-	 */
-	// facilityData := facility.GetFacilities(client, userToken, rootURL+"/facilities")
-	// fmt.Println(facilityData.Facilities[0].Name)
+	// Choose a device if there is one available and power it on.
+	// Get the ip addresses for the device and set the port number for the server.
+	d := getDevice(client, id)
+	ipAddrList := ip.RetrieveDeviceIPAddresses(client, userToken, rootURL, d.ID)
+	ipAddr := ipAddrList.Addresses[0].Network
+	fmt.Println("IP Address: ", ipAddr)
+	server.Addr = strings.Replace(server.Addr, ":", ipAddr+":", -1)
 
-	/**
-	 * Use the HTTP Client and authentication token
-	 * to get the available plans.
-	 */
-	// planData := plan.GetPlans(client, userToken, rootURL+"/plans")
-	// fmt.Println(planData.Plans[0].Name)
+	log.Println(color.YellowString("Trying to listen..."))
+	_, err := net.Listen("tcp", server.Addr)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-	/**
-	 * Use the HTTP Client and authentication token
-	 * to get the available plans.
-	 *
-	 * This method was made when I created my own SSH Key for the device provisioning.
-	 */
-	// keyData := keys.GetProjectSSHKeys(client, userToken, rootURL+"/projects/"+projID+"/ssh-keys")
-	// fmt.Println(keyData.Keys[0].Key)
+	// fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
+	// status, err := bufio.NewReader(conn).ReadString('\n')
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
+	// log.Fatalln(status)
 
-	// Post a Device
-	// deviceData := device.CreateDevice(client, userToken, rootURL+"/projects/"+projID+"/devices",
-	// 	"www.QualenPollard.com",
-	// 	facilityData.Facilities[0].Code,
-	// 	planData.Plans[0].Slug,
-	// 	osData.OSes[0].Slug,
-	// 	keys.ToString(keyData.Keys))
-	// fmt.Println(deviceData)
+	log.Println(color.YellowString("Listing to port: " + server.Addr))
+	// if err := server.ListenAndServe(); err != nil {
+	// 	// Error starting or closing listener:
+	// 	log.Printf("HTTP server ListenAndServe: %v", err)
+	// }
+	<-done
+	fmt.Println("Exiting...")
 }

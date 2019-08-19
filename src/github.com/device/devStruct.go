@@ -18,6 +18,7 @@ type Device struct {
 	Facility              facility.Facility        `json:"facility"`
 	Plan                  plan.Plan                `json:"plan"`
 	Hostname              string                   `json:"hostname"`
+	State                 string                   `json:"state"`
 	Description           string                   `json:"description"`
 	BillingCycle          string                   `json:"billing_cycle"`
 	OperatingSystem       packetos.OperatingSystem `json:"operating_system"`
