@@ -8,22 +8,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link rel="stylesheet" type="text/css" href="../static/style.css">
         <link rel="stylesheet" type="text/css" href="../static/materialize.css">
-
-        <script>
-            function checkState() {
-                var state = document.getElementById("state");
-                console.log(state)
-
-                var text = state.innerHTML
-                console.log(text)
-
-                if (text == "inactive") {
-                    document.getElementById("stateInput").value = "ACTIVATE"
-                } else {
-                    document.getElementById("stateInput").value = "DEACTIVATE"
-                }
-            }
-        </script>
     </head>
 
     <body>
@@ -63,11 +47,17 @@
                             <li>Pricing: ${{.Plan.Pricing.Hour}} {{.BillingCycle}}</li>
                             <li>State: <i id="state">{{.State}}</i></li>
                             
+                            {{if eq .State "inactive"}}
                             <form action="/Devices/">
-                                <input class="white-text small" id="stateInput" type="submit" value="submit"/>
+                                <input class="white-text small" id="stateInput" type="submit" value="ACTIVATE"/>
                             </form>
+                            
+                            {{else}}
+                            <form action="/Devices/">
+                                <input class="white-text small" id="stateInput" type="submit" value="DEACTIVATE"/>
+                            </form>
+                            {{end}}
 
-                            <script>checkState()</script>
                             {{end}}
                         </ul>
                     </div>

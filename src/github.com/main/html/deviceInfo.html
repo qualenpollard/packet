@@ -8,9 +8,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link rel="stylesheet" type="text/css" href="../static/style.css">
         <link rel="stylesheet" type="text/css" href="../static/materialize.css">
-        <script>
-            function checkBool(){}
-        </script>
     </head>
 
     <body>
@@ -42,10 +39,19 @@
                         <br>
                         <h5 class="center">Device: {{.ID}}</h5>
                         <h6 class="center"><b>Hostname: </b><i>{{.Hostname}}</i></h6>
-                        <h6 class="center"><b>State: </b><i>{{.State}}</i></h6>
-                        <form class="center" action="/Devices/">
-                            <input class="white-text thin small" type="submit" value="ACTIVATE" />
+                        <h6 class="center"><b>State: </b><i id="state">{{.State}}</i></h6>
+
+                        {{if eq .State "inactive"}}
+                        <form action="/Devices/">
+                            <input class="white-text small" id="stateInput" type="submit" value="ACTIVATE" />
                         </form>
+                        
+                        {{else}}
+                        <form action="/Devices/">
+                            <input class="white-text small" id="stateInput" type="submit" value="DEACTIVATE" />
+                        </form>
+                        {{end}}
+
                     </div>
                     
                     <div class="col l9 m12 s12">
