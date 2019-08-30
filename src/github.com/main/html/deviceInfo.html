@@ -65,18 +65,41 @@
                             <li><b>Location: </b>{{.Facility.Name}}</li>
                             <li><b>ID: </b>{{.Facility.ID}}</li>
                             <li><b>Code: </b>{{.Facility.Code}}</li>
-                            <li><b>Features: </b>{{.Facility.Features}}</li>
-                            <li><b>IP Addresses: </b>{{.Facility.IPRanges}}</li>
+                            
+                            <li><b>Features:</b></li>
+                            <ul>
+                                {{range .Facility.Features}}
+                                    <li id="feat">{{.}}</li>
+                                {{end}}
+                            </ul>
+
+                            <li><b>IP Addresses:</b></li>
+                            <ul>
+                                {{range .Facility.IPRanges}}
+                                    <li id="feat">{{.}}</li>
+                                {{end}}
+                            </ul>
                         </ul>
                         
                         <h5 class="left"><b>Operating System</b></h5><br><br>
                         <ul>
                             <li><b>ID: </b>{{.OperatingSystem.ID}}</li>
                             <li><b>Name: </b>{{.OperatingSystem.Name}}</li>
-                            <li><b>Preinstallable: </b>{{.OperatingSystem.Preinstallable}}</li>
+
+                            {{if eq .OperatingSystem.Preinstallable true}}
+                            <li><b>Preinstallable: </b>Yes</li>
+                            {{else}}
+                            <li><b>Preinstallable: </b>No</li>
+                            {{end}}
+
                             <li><b>Pricing: </b>${{.OperatingSystem.Pricing.hour.price}}/hr</li>
                             <li><b>Version: </b>{{.OperatingSystem.Version}}</li>
-                            <li><b>Licensed: </b>{{.OperatingSystem.Licensed}}</li>
+
+                            {{if eq .OperatingSystem.Licensed true}}
+                            <li><b>Licensed: </b>Yes</li>
+                            {{else}}
+                            <li><b>Licensed: </b>No</li>
+                            {{end}}
                         </ul>
                         
                         <h5 class="left"><b>Plan</b></h5><br><br>
@@ -84,11 +107,9 @@
                             <li><b>ID: </b>{{.Plan.ID}}</li>
                             <li><b>Class: </b>{{.Plan.Class}}</li>
                             <li><b>Line: </b>{{.Plan.Line}}</li>
-                            <h6 class="left"><b>Specs: </b></h6><br>
-                            
                         </ul>
 
-                        <h5 class="left"><b>IP Addresses</b></h5><br><br>
+                        <h5 class="left"><b>IP Address Information</b></h5><br><br>
                         <ul>
                             {{range .IPAddresses}}
                             <li><b>ID: </b>{{.ID}}</li>
