@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <title>Device Info</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="stylesheet" type="text/css" href="../static/style.css">
+        <link rel="stylesheet" type="text/css" href="../static/materialize.css">
+        <script>
+            function checkBool(){}
+        </script>
+    </head>
+
+    <body>
+
+        <nav>
+            <div class="nav-wrapper packetColor white-text">
+                <div class="container">
+                    <div class="row">
+                        <div class="col s12">
+                            <ul>
+                                <li><a href="/Devices/"><img src="https://www.packet.com/assets/images/logo-white.png"></a></li>
+                                <li><a href="/Devices/">Home</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+
+        <main>
+            <div class="container content-margin">
+                <div class="row">
+                    <div class="center">
+                        <br>
+                        <form class="right" action="/Devices/">
+                            <input class="white-text thin small" type="submit" value="GO BACK" />
+                        </form>
+                        <br>
+                        <h5 class="center">Device: {{.ID}}</h5>
+                        <h6 class="center"><b>Hostname: </b><i>{{.Hostname}}</i></h6>
+                        <h6 class="center"><b>State: </b><i>{{.State}}</i></h6>
+                        <form class="center" action="/Devices/">
+                            <input class="white-text thin small" type="submit" value="ACTIVATE" />
+                        </form>
+                    </div>
+                    
+                    <div class="col l9 m12 s12">
+                        <h5 class="left"><b>Billing</b></h5><br><br>
+                        <ul>
+                            <li><b>Pricing: </b> ${{.Plan.Pricing.Hour}} {{.BillingCycle}}</li>
+                        </ul>
+
+                        <h5 class="left"><b>Facility</b></h6><br><br>
+                        <ul>
+                            <li><b>Location: </b>{{.Facility.Name}}</li>
+                            <li><b>ID: </b>{{.Facility.ID}}</li>
+                            <li><b>Code: </b>{{.Facility.Code}}</li>
+                            <li><b>Features: </b>{{.Facility.Features}}</li>
+                            <li><b>IP Addresses: </b>{{.Facility.IPRanges}}</li>
+                        </ul>
+                        
+                        <h5 class="left"><b>Operating System</b></h5><br><br>
+                        <ul>
+                            <li><b>ID: </b>{{.OperatingSystem.ID}}</li>
+                            <li><b>Name: </b>{{.OperatingSystem.Name}}</li>
+                            <li><b>Preinstallable: </b>{{.OperatingSystem.Preinstallable}}</li>
+                            <li><b>Pricing: </b>${{.OperatingSystem.Pricing.hour.price}}/hr</li>
+                            <li><b>Version: </b>{{.OperatingSystem.Version}}</li>
+                            <li><b>Licensed: </b>{{.OperatingSystem.Licensed}}</li>
+                        </ul>
+                        
+                        <h5 class="left"><b>Plan</b></h5><br><br>
+                        <ul>
+                            <li><b>ID: </b>{{.Plan.ID}}</li>
+                            <li><b>Class: </b>{{.Plan.Class}}</li>
+                            <li><b>Line: </b>{{.Plan.Line}}</li>
+                            <h6 class="left"><b>Specs: </b></h6><br>
+                            
+                        </ul>
+
+                        <h5 class="left"><b>IP Addresses</b></h5><br><br>
+                        <ul>
+                            {{range .IPAddresses}}
+                            <li><b>ID: </b>{{.ID}}</li>
+                            <li><b>Created: </b>{{.CreatedAt}}</li>
+                            <li><b>Family: </b>IPV{{.AddressFamily}}</li>
+                            <li><b>Address: </b>{{.Address}}</li>
+                            <li><b>Facility: </b>{{.Facility.Name}}</li>
+                            <br>
+                            {{end}}
+                        </ul>
+                        
+                    </div>
+                </div>
+            </div>
+        </main>    
+            
+        <footer class="page-footer white">
+            <div class="footer-copyright">
+                <div class="container">
+                    <span class="white-text left">Version 1.0.0 (August 25th)</span>
+                    <span class="white-text right">© 2019 Qualen Pollard</span>
+                </div>
+            </div>
+        </footer>
+
+    </body>
+</html>

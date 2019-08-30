@@ -4,20 +4,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
+	"regexp"
 	"syscall"
 	"time"
 
 	"github.com/device"
 	"github.com/fatih/color"
 	"github.com/gorilla/mux"
-	"github.com/ip"
 )
 
 // Variables used for API requests
@@ -25,9 +24,22 @@ var (
 	rootURL   = os.Getenv("ROOTURL")
 	userToken = os.Getenv("AUTHTOKEN")
 	projID    = os.Getenv("PROJECTUUID")
+	client    = &http.Client{Timeout: time.Duration(10 * time.Second)}
+	validPath = regexp.MustCompile("^/(Devices)/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*")
+	templates = template.Must(template.ParseFiles("html/index.html", "html/deviceInfo.html"))
 )
 
-// Verify if the environment variables were set
+/**
+ *
+ *
+ * TODO: Change the font in the buttons to match more like Packet
+ * TODO: Finish formatting the info for the devices
+ * TODO: Set up the action to activate and figure out how to check the value in javascript
+ *
+ *
+ */
+
+// Verification of the environment variables
 func init() {
 	// Get the Root URL.
 	fmt.Print("Checking for Root URL... ")
@@ -51,14 +63,13 @@ func init() {
 	fmt.Println(color.GreenString("Initialized"))
 }
 
-func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool, cli chan *http.Client, devID chan string) {
+func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool /*devID chan string*/) {
 
 	<-sigs
-	c := <-cli
-	dID := <-devID
 	s := <-srv
+	// dID := <-devID
 	fmt.Println()
-	fmt.Println("Graceful Shutdown Started...")
+	fmt.Println(color.HiRedString("Graceful Shutdown Started..."))
 
 	// We received an interrupt signal, shut down.
 	if err := s.Shutdown(context.Background()); err != nil {
@@ -66,69 +77,76 @@ func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool
 		log.Printf("HTTP server Shutdown: %v", err)
 	}
 
-	d := device.Retrieve(c, userToken, rootURL, dID)
+	/**
+	 * Dead code from a previous idea that I was approaching.
+	 */
+	// d := device.Retrieve(c, userToken, rootURL, dID)
 
-	// If the device is active, power it off, else, do nothing.
-	if d.State == "active" {
+	// // If the device is active, power it off, else, do nothing.
+	// if d.State == "active" {
 
-		log.Println(color.BlueString("Powering device off..."))
-		device.ChangeState(c, userToken, rootURL, dID, "TurnOff")
+	// 	log.Println(color.BlueString("Powering device off..."))
+	// 	device.ChangeState(c, userToken, rootURL, dID, "TurnOff")
 
-		// Check for the device to be inactive every 5 seconds.
-		duration := time.Duration(5) * time.Second
-		for d.State != "inactive" {
-			time.Sleep(duration)
-			d = device.Retrieve(c, userToken, rootURL, dID)
-		}
-	}
+	// 	// Check for the device to be inactive every 5 seconds.
+	// 	duration := time.Duration(5) * time.Second
+	// 	for d.State != "inactive" {
+	// 		time.Sleep(duration)
+	// 		d = device.Retrieve(c, userToken, rootURL, dID)
+	// 	}
+	// }
 
-	fmt.Println(color.RedString("Device inactive"))
+	// fmt.Println(color.RedString("Device inactive"))
+	fmt.Println(color.HiRedString("Graceful Shutdown Complete."))
 	done <- true
 }
 
-func getDevice(c *http.Client, id chan string) device.Device {
-
-	// Get all of the Devices in the project.
-	log.Println("Getting all devices in project.")
-	deviceList := device.RetrieveDevices(c, userToken, rootURL, projID)
-	if len(deviceList.Devices) == 0 {
-		log.Fatalln(color.RedString("There are no devices available."))
+func indexHandler(w http.ResponseWriter, r *http.Request, title string) {
+	devs, err := device.RetrieveDevices(client, userToken, rootURL, projID)
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	// Seclect device to power on, channels device.ID to gracefulShutDown()
-	log.Println("Getting device ID")
-	devID := deviceList.Devices[0].ID
-	id <- devID
-	fmt.Println("Device ID: ", devID)
-
-	/**
-	 * Get the device that'll be used as the server and turn it on
-	 * if it's not already active.
-	 */
-	d := device.Retrieve(c, userToken, rootURL, devID)
-	active := device.CheckState(d)
-	if !active {
-		fmt.Println(color.BlueString("Powering on device..."))
-		stateChanged := device.ChangeState(c, userToken, rootURL, devID, "TurnOn")
-		if !stateChanged {
-			log.Fatalln(color.RedString("Turn on device incomplete."))
-		}
-
-		// Check for the device to be active every 5 seconds.
-		duration := time.Duration(5) * time.Second
-		for d.State != "active" {
-			time.Sleep(duration)
-			d = device.Retrieve(c, userToken, rootURL, devID)
-		}
-
-		log.Println(color.GreenString("Device Active"))
+	err = templates.ExecuteTemplate(w, "index.html", &devs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	return *d
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "This is test")
+func deviceInfoHandler(w http.ResponseWriter, r *http.Request, id string) {
+
+	fmt.Println(id)
+	dev, err := device.Retrieve(client, userToken, rootURL, projID, id)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = templates.ExecuteTemplate(w, "deviceInfo.html", dev)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// func renderTemplate(w http.ResponseWriter, tmpl string, d *device.Device) {
+// 	err := templates.ExecuteTemplate(w, tmpl+".html", d)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 	}
+// }
+
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+
+			io.WriteString(w, "Can't find: "+r.URL.Path)
+			return
+		} else if m[2] == "" {
+			fn(w, r, m[1])
+		} else {
+			fn(w, r, m[2])
+		}
+	}
 }
 
 func main() {
@@ -140,54 +158,41 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	srv := make(chan *http.Server, 1)
 	done := make(chan bool, 1)
-	c := make(chan *http.Client, 1)
-	id := make(chan string, 1)
+	// id := make(chan string, 1)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	/**
-	* Create a new router and a new HTTP client/Server.
-	* Channels client into gracefulShutDown()
+	* Create a new router and a new HTTP Server.
 	 */
 	r := mux.NewRouter()
-	client := &http.Client{}
 	server := &http.Server{
-		Addr:    ":80",
+		Addr:    ":8080",
 		Handler: r}
-	c <- client
 	srv <- server
 
-	go gracefulShutDown(sigs, srv, done, c, id)
+	go gracefulShutDown(sigs, srv, done /*id*/)
 
 	//Index page
-	r.HandleFunc("/QualenPollard", indexHandler)
+	r.HandleFunc("/Devices/", makeHandler(indexHandler))
+	r.HandleFunc("/Devices/{ID}", makeHandler(deviceInfoHandler))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
+	/**
+	 * Dead code from a previous idea that I was approaching.
+	 */
 	// Choose a device if there is one available and power it on.
-	// Get the ip addresses for the device and set the port number for the server.
-	d := getDevice(client, id)
-	ipAddrList := ip.RetrieveDeviceIPAddresses(client, userToken, rootURL, d.ID)
-	ipAddr := ipAddrList.Addresses[0].Network
-	fmt.Println("IP Address: ", ipAddr)
-	server.Addr = strings.Replace(server.Addr, ":", ipAddr+":", -1)
-
-	log.Println(color.YellowString("Trying to listen..."))
-	_, err := net.Listen("tcp", server.Addr)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
-	// status, err := bufio.NewReader(conn).ReadString('\n')
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-	// log.Fatalln(status)
+	// d := getDevice(client, id)
+	// ipAddrList := ip.RetrieveDeviceIPAddresses(client, userToken, rootURL, d.ID)
+	// ipAddr := ipAddrList.Addresses[0].Network
+	// fmt.Println("IP Address: ", ipAddr)
+	// server.Addr = strings.Replace(server.Addr, ":", ipAddr+":", -1)
 
 	log.Println(color.YellowString("Listing to port: " + server.Addr))
-	// if err := server.ListenAndServe(); err != nil {
-	// 	// Error starting or closing listener:
-	// 	log.Printf("HTTP server ListenAndServe: %v", err)
-	// }
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		// Error starting or closing listener:
+		log.Printf("HTTP server ListenAndServe: %v", err)
+	}
 	<-done
 	fmt.Println("Exiting...")
 }

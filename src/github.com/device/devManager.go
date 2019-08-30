@@ -34,11 +34,11 @@ func CheckState(d *Device) bool {
 }
 
 // RetrieveDevices ...
-func RetrieveDevices(c *http.Client, token, url, projectID string) DataBase {
+func RetrieveDevices(c *http.Client, token, url, projectID string) (*DataBase, error) {
 	// Create a new request to get the Device data.
 	req, reqErr := http.NewRequest("GET", url+"/projects/"+projectID+"/devices", nil)
 	if reqErr != nil {
-		log.Fatalln(reqErr)
+		return nil, reqErr
 	}
 
 	// Seth the authentication token for the API
@@ -46,7 +46,7 @@ func RetrieveDevices(c *http.Client, token, url, projectID string) DataBase {
 	req.Header.Set("Content-type", "application/json")
 	resp, respErr := c.Do(req)
 	if respErr != nil {
-		log.Fatalln(respErr)
+		return nil, respErr
 	}
 
 	if resp.StatusCode < 300 {
@@ -60,25 +60,25 @@ func RetrieveDevices(c *http.Client, token, url, projectID string) DataBase {
 	// Get the response from the request
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
 	var db DataBase
 	err = json.Unmarshal(body, &db)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
-	return db
+	return &db, nil
 }
 
 // Retrieve ...
-func Retrieve(c *http.Client, token, url, deviceID string) *Device {
+func Retrieve(c *http.Client, token, url, projID, deviceID string) (*Device, error) {
 
 	// Create request to get the device.
 	req, reqErr := http.NewRequest("GET", url+"/devices/"+deviceID, nil)
 	if reqErr != nil {
-		log.Fatalln(reqErr)
+		return nil, reqErr
 	}
 
 	// Set the headers for authentication and the content-type
@@ -86,7 +86,7 @@ func Retrieve(c *http.Client, token, url, deviceID string) *Device {
 	req.Header.Set("Content-type", "application/json")
 	resp, respErr := c.Do(req)
 	if respErr != nil {
-		log.Fatalln(respErr)
+		return nil, respErr
 	}
 
 	if resp.StatusCode < 300 {
@@ -100,7 +100,7 @@ func Retrieve(c *http.Client, token, url, deviceID string) *Device {
 	// Get the body from the response
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
 	// Decode the json data into the device.
@@ -110,7 +110,7 @@ func Retrieve(c *http.Client, token, url, deviceID string) *Device {
 		log.Fatalln(err)
 	}
 
-	return d
+	return d, nil
 }
 
 // UpdateDevice ...

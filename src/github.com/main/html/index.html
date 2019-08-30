@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <title>Project Devices</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="stylesheet" type="text/css" href="../static/style.css">
+        <link rel="stylesheet" type="text/css" href="../static/materialize.css">
+
+        <script>
+            function checkState() {
+                var state = document.getElementById("state");
+                console.log(state)
+
+                var text = state.innerHTML
+                console.log(text)
+
+                if (text == "inactive") {
+                    document.getElementById("stateInput").value = "ACTIVATE"
+                } else {
+                    document.getElementById("stateInput").value = "DEACTIVATE"
+                }
+            }
+        </script>
+    </head>
+
+    <body>
+
+        <nav>
+            <div class="nav-wrapper packetColor white-text">
+                <div class="container">
+                    <div class="row">
+                        <div class="col s12">
+                            <ul>
+                                <li><a href="/Devices/"><img src="https://www.packet.com/assets/images/logo-white.png"></a></li>
+                                <li><a href="/Devices/">Home</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+            
+        <main>
+            <div class="container content-margin">
+                <div class="row">
+                    <div class="center">
+                        <h4>Project Devices</h4>
+                        
+                        <ul>
+                            {{range .Devices}}
+                            <li><h6>Device: {{.ID}}</h6></li>
+                            <form action="/Devices/{{.ID}}">
+                                <input class="white-text small" type="submit" value="SEE ALL INFO"/>
+                            </form>
+                            
+                            <li>Hostname: <i>{{.Hostname}}</i></li>
+                            <li>Facility: {{.Facility.Name}}</li>
+                            <li>OS: {{.OperatingSystem.Slug}}</li>
+                            <li>Plan: {{.Plan.Name}}</li>
+                            <li>Pricing: ${{.Plan.Pricing.Hour}} {{.BillingCycle}}</li>
+                            <li>State: <i id="state">{{.State}}</i></li>
+                            
+                            <form action="/Devices/">
+                                <input class="white-text small" id="stateInput" type="submit" value="submit"/>
+                            </form>
+
+                            <script>checkState()</script>
+                            {{end}}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+            
+            <footer class="page-footer white">
+                <div class="footer-copyright">
+                    <div class="container">
+                        <span class="white-text left">Version 1.0.0 (August 25th)</span>
+                        <span class="white-text right">© 2019 Qualen Pollard</span>
+                    </div>
+                </div>
+            </footer>
+            
+    </body>
+</html>
+
