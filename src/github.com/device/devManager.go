@@ -11,19 +11,6 @@ import (
 	"github.com/fatih/color"
 )
 
-// ChangeState returns true if the action was complete, false otherwise
-func ChangeState(client *http.Client, token, url, devID, action string) bool {
-	if action == "TurnOn" {
-		performAction(client, token, url, devID, "power_on")
-		return true
-	} else if action == "TurnOff" {
-		performAction(client, token, url, devID, "power_off")
-		return true
-	}
-
-	return false
-}
-
 // CheckState returns true if the device is active, false otherwise.
 func CheckState(d *Device) bool {
 	if d.State == "inactive" {
@@ -33,7 +20,10 @@ func CheckState(d *Device) bool {
 	return true
 }
 
-// RetrieveDevices ...
+/**
+ * RetrieveDevices makes a request to get a slice of devices of a project
+ * Returns a pointer to a DataBase of devices, or an error if the request failed.
+ */
 func RetrieveDevices(c *http.Client, token, url, projectID string) (*DataBase, error) {
 	// Create a new request to get the Device data.
 	req, reqErr := http.NewRequest("GET", url+"/projects/"+projectID+"/devices", nil)
@@ -51,7 +41,7 @@ func RetrieveDevices(c *http.Client, token, url, projectID string) (*DataBase, e
 
 	if resp.StatusCode < 300 {
 		fmt.Println("HTTP Response Status for", color.BlueString("Device \"Retrieve Devices"), "GET:", resp.StatusCode, color.GreenString(http.StatusText(resp.StatusCode)))
-	} else {
+
 		fmt.Println("HTTP Response Status for", color.BlueString("Device \"Retrieve Devices"), "GET:", resp.StatusCode, color.RedString(http.StatusText(resp.StatusCode)))
 	}
 
@@ -72,7 +62,10 @@ func RetrieveDevices(c *http.Client, token, url, projectID string) (*DataBase, e
 	return &db, nil
 }
 
-// Retrieve ...
+/**
+ * Retrieve makes a request to get a specific device of a project
+ * Returns a pointer to a specific device, or an error if the request failed
+ */
 func Retrieve(c *http.Client, token, url, projID, deviceID string) (*Device, error) {
 
 	// Create request to get the device.
@@ -113,20 +106,11 @@ func Retrieve(c *http.Client, token, url, projID, deviceID string) (*Device, err
 	return d, nil
 }
 
-// UpdateDevice ...
-func UpdateDevice(c *http.Client, token, url string) []byte {
-	bit := []byte{}
-	return bit
-}
-
-// DeleteDevice ...
-func DeleteDevice(c *http.Client, token, url string) []byte {
-	bit := []byte{}
-	return bit
-}
-
-// PerformAction ...
-func performAction(c *http.Client, token, url, deviceID, action string) {
+/**
+ * PerformAction changes the state of a device.
+ * Actions consist of "power_on" or "power_off"
+ */
+func PerformAction(c *http.Client, token, url, deviceID, action string) {
 
 	// Encode the device data.
 	reqBody, encodeErr := json.Marshal(map[string]string{"type": action})
@@ -157,6 +141,9 @@ func performAction(c *http.Client, token, url, deviceID, action string) {
 	resp.Body.Close()
 }
 
+/**
+ * Below is dead code from another idea that I was approaching.
+ */
 // CreateDevice ...
 // func CreateDevice(c *http.Client, token, url, host, facility, plan, packetos string, keys []string) DataBase {
 // 	// Create a new Device

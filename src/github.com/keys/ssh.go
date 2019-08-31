@@ -1,3 +1,4 @@
+// Package keys contains the structs and methods for the keys of a project
 package keys
 
 import (
@@ -10,7 +11,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// Key ...
+// Key is the information that describes the key for a project
 type Key struct {
 	ID          string      `json:"id"`
 	Label       string      `json:"label"`
@@ -22,12 +23,15 @@ type Key struct {
 	URL         string      `json:"href"`
 }
 
-// DataBase ...
+// DataBase is a list of Keys
 type DataBase struct {
 	Keys []Key `json:"ssh_keys"`
 }
 
-// GetProjectSSHKeys ...
+/**
+ * GetProjectSSHKeys makes a request to get the keys of a specific project
+ * Returns Database - a list of Key
+ */
 func GetProjectSSHKeys(c *http.Client, token, url string) DataBase {
 	// Create a new request to get the Facility data.
 	req, reqErr := http.NewRequest("GET", url, nil)
@@ -65,7 +69,10 @@ func GetProjectSSHKeys(c *http.Client, token, url string) DataBase {
 	return db
 }
 
-// ToString ...
+/**
+ * ToString converts a list of Key to a list of String
+ * Returns a slice of strings
+ */
 func ToString(keys []Key) []string {
 	strKeys := []string{}
 

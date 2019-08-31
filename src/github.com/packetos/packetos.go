@@ -1,3 +1,4 @@
+// Package packetos contains the structs and methods for the operating systems of a device
 package packetos
 
 import (
@@ -10,12 +11,12 @@ import (
 	"github.com/fatih/color"
 )
 
-// DataBase ...
+// DataBase - a list of OperatingSystem
 type DataBase struct {
 	OSes []OperatingSystem `json:"operating_systems"`
 }
 
-// OperatingSystem ...
+// OperatingSystem is the information of the operating system for the device
 type OperatingSystem struct {
 	ID             string      `json:"id"`
 	Slug           string      `json:"slug"`
@@ -28,7 +29,10 @@ type OperatingSystem struct {
 	Licensed       bool        `json:"licensed"`
 }
 
-// GetOSes ...
+/**
+ * GetOSes is the method that makes a request to get the operating systems.
+ * Returns Database - a list of OperatingSystem
+ */
 func GetOSes(c *http.Client, token, url string) DataBase {
 	// Create a new request to get the available Operating Systems.
 	req, reqErr := http.NewRequest("GET", url, nil)

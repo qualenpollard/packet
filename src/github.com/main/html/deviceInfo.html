@@ -42,14 +42,14 @@
                         <h6 class="center"><b>State: </b><i id="state">{{.State}}</i></h6>
 
                         {{if eq .State "inactive"}}
-                        <form action="/Devices/">
-                            <input class="white-text small" id="stateInput" type="submit" value="ACTIVATE" />
-                        </form>
+                            <form action="/Device/{{.ID}}/power_on">
+                                <input class="white-text small" id="stateInput" type="submit" value="ACTIVATE" />
+                            </form>
                         
-                        {{else}}
-                        <form action="/Devices/">
-                            <input class="white-text small" id="stateInput" type="submit" value="DEACTIVATE" />
-                        </form>
+                        {{else if eq .State "active"}}
+                            <form action="/Device/{{.ID}}/power_off">
+                                <input class="white-text small" id="stateInput" type="submit" value="DEACTIVATE" />
+                            </form>
                         {{end}}
 
                     </div>
@@ -85,21 +85,21 @@
                         <ul>
                             <li><b>ID: </b>{{.OperatingSystem.ID}}</li>
                             <li><b>Name: </b>{{.OperatingSystem.Name}}</li>
-
-                            {{if eq .OperatingSystem.Preinstallable true}}
-                            <li><b>Preinstallable: </b>Yes</li>
-                            {{else}}
-                            <li><b>Preinstallable: </b>No</li>
-                            {{end}}
-
-                            <li><b>Pricing: </b>${{.OperatingSystem.Pricing.hour.price}}/hr</li>
                             <li><b>Version: </b>{{.OperatingSystem.Version}}</li>
-
+                            <li><b>Pricing: </b>${{.OperatingSystem.Pricing.hour.price}}/hr</li>
+                            
                             {{if eq .OperatingSystem.Licensed true}}
                             <li><b>Licensed: </b>Yes</li>
                             {{else}}
                             <li><b>Licensed: </b>No</li>
                             {{end}}
+                            
+                            {{if eq .OperatingSystem.Preinstallable true}}
+                            <li><b>Preinstallable: </b>Yes</li>
+                            {{else}}
+                            <li><b>Preinstallable: </b>No</li>
+                            {{end}} 
+                            
                         </ul>
                         
                         <h5 class="left"><b>Plan</b></h5><br><br>
@@ -107,17 +107,45 @@
                             <li><b>ID: </b>{{.Plan.ID}}</li>
                             <li><b>Class: </b>{{.Plan.Class}}</li>
                             <li><b>Line: </b>{{.Plan.Line}}</li>
+                            
+                            <h6><b>Plan Specs:</b></h6>
+
+                            <li><b>Memory: </b>{{.Plan.Specs.Memory.Total}}</li>
+                            
+                            <li><b>CPUs:</b></li>
+                            <ul>
+                                {{range .Plan.Specs.CPUs}}
+                                    <li id="feat">{{.Type}}</li>
+                                {{end}}
+                            </ul>
+                            
+                            {{if .Plan.Specs.GPUs}}
+                            <li><b>GPUs:</b></li>
+                            <ul>
+                                {{range .Plan.Specs.GPUs}}
+                                    <li id="feat">{{.Type}}</li>
+                                {{end}}
+                            </ul>
+                            {{end}}
+
+                            <li><b>Drives:</b></li>
+                            <ul>
+                                {{range .Plan.Specs.Drives}}
+                                    <li id="feat"><b>Type: </b>{{.Type}}</li>
+                                    <li id="feat"><b>Size: </b>{{.Size}}</li>
+                                {{end}}
+                            </ul>
                         </ul>
 
                         <h5 class="left"><b>IP Address Information</b></h5><br><br>
                         <ul>
                             {{range .IPAddresses}}
-                            <li><b>ID: </b>{{.ID}}</li>
-                            <li><b>Created: </b>{{.CreatedAt}}</li>
-                            <li><b>Family: </b>IPV{{.AddressFamily}}</li>
-                            <li><b>Address: </b>{{.Address}}</li>
-                            <li><b>Facility: </b>{{.Facility.Name}}</li>
-                            <br>
+                                <li><b>ID: </b>{{.ID}}</li>
+                                <li><b>Family: </b>IPV{{.AddressFamily}}</li>
+                                <li><b>Address: </b>{{.Address}}</li>
+                                <li><b>Facility: </b>{{.Facility.Name}}</li>
+                                <li><b>Created: </b>{{.CreatedAt}}</li>
+                                <br>
                             {{end}}
                         </ul>
                         

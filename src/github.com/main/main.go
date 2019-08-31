@@ -1,4 +1,4 @@
-// Package will get the environment variables for http requests to the API and start the device that will host the server.
+// Package will get the environment variables for http requests to the API and route paths for the Project Device dashboard web app.
 package main
 
 import (
@@ -19,27 +19,19 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Variables used for API requests
 var (
-	rootURL   = os.Getenv("ROOTURL")
-	userToken = os.Getenv("AUTHTOKEN")
-	projID    = os.Getenv("PROJECTUUID")
-	client    = &http.Client{Timeout: time.Duration(10 * time.Second)}
-	validPath = regexp.MustCompile("^/(Devices)/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*")
-	templates = template.Must(template.ParseFiles("html/index.html", "html/deviceInfo.html"))
+	rootURL     = os.Getenv("ROOTURL")
+	userToken   = os.Getenv("AUTHTOKEN")
+	projID      = os.Getenv("PROJECTUUID")
+	client      = &http.Client{Timeout: time.Duration(10 * time.Second)}
+	validPath   = regexp.MustCompile("^/(Devices)/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*")
+	validAction = regexp.MustCompile("^/(Device)/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/(power_on|power_off)")
+	templates   = template.Must(template.ParseFiles("html/index.html", "html/deviceInfo.html"))
 )
 
 /**
- *
- *
- * TODO: Change the font in the buttons to match more like Packet
- * TODO: Finish formatting the info for the devices
- * TODO: Set up the action to activate and figure out how to check the value in javascript
- *
- *
+ * Verification of the environment variables
  */
-
-// Verification of the environment variables
 func init() {
 	// Get the Root URL.
 	fmt.Print("Checking for Root URL... ")
@@ -63,11 +55,13 @@ func init() {
 	fmt.Println(color.GreenString("Initialized"))
 }
 
-func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool /*devID chan string*/) {
+/**
+ * Performs a graceful shut down of the server
+ */
+func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool) {
 
 	<-sigs
 	s := <-srv
-	// dID := <-devID
 	fmt.Println()
 	fmt.Println(color.HiRedString("Graceful Shutdown Started..."))
 
@@ -77,63 +71,63 @@ func gracefulShutDown(sigs chan os.Signal, srv chan *http.Server, done chan bool
 		log.Printf("HTTP server Shutdown: %v", err)
 	}
 
-	/**
-	 * Dead code from a previous idea that I was approaching.
-	 */
-	// d := device.Retrieve(c, userToken, rootURL, dID)
-
-	// // If the device is active, power it off, else, do nothing.
-	// if d.State == "active" {
-
-	// 	log.Println(color.BlueString("Powering device off..."))
-	// 	device.ChangeState(c, userToken, rootURL, dID, "TurnOff")
-
-	// 	// Check for the device to be inactive every 5 seconds.
-	// 	duration := time.Duration(5) * time.Second
-	// 	for d.State != "inactive" {
-	// 		time.Sleep(duration)
-	// 		d = device.Retrieve(c, userToken, rootURL, dID)
-	// 	}
-	// }
-
 	// fmt.Println(color.RedString("Device inactive"))
 	fmt.Println(color.HiRedString("Graceful Shutdown Complete."))
 	done <- true
 }
 
+/**
+ * indexHandler is the handler for the route page "/Devices/" that presents all of the project devices.
+ */
 func indexHandler(w http.ResponseWriter, r *http.Request, title string) {
+
+	// Retrieve all of the devices from the project.
 	devs, err := device.RetrieveDevices(client, userToken, rootURL, projID)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	// Execute the template with the device list as the data pipeline.
 	err = templates.ExecuteTemplate(w, "index.html", &devs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
+/**
+ * deviceInfoHandler is the handler for the route page "/Devices/{ID}" which presents a more in depth
+ * overview of a specific device.
+ */
 func deviceInfoHandler(w http.ResponseWriter, r *http.Request, id string) {
 
-	fmt.Println(id)
+	// Get a specific device by it's UUID
 	dev, err := device.Retrieve(client, userToken, rootURL, projID, id)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	// Use the device if it was retrieved as the pipeline to the route.
 	err = templates.ExecuteTemplate(w, "deviceInfo.html", dev)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-// func renderTemplate(w http.ResponseWriter, tmpl string, d *device.Device) {
-// 	err := templates.ExecuteTemplate(w, tmpl+".html", d)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 	}
-// }
+/**
+ * changeState is the handler for the route page "/Device/{ID}/action"
+ * The action can either be "power_on" or "power_off".
+ * After the action is performed, it is then redirected to the "/Devices/" page.
+ */
+func changeState(w http.ResponseWriter, r *http.Request, id, action string) {
+	device.PerformAction(client, userToken, rootURL, id, action)
+	http.Redirect(w, r, "/Devices/", http.StatusSeeOther)
+}
 
+/**
+ * makeHandler is a closure for the handlers indexHandler and deviceInfoHandler.
+ * It checks if the route path is a valid path and if so, creates the specified handler
+ * with the id.
+ */
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
@@ -149,6 +143,23 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 	}
 }
 
+/**
+ * actionHandler is a closure for the handler changeState.
+ * It checks if the route path is a valid path and if so, creates the handler with the id and action.
+ */
+func actionHandler(fn func(http.ResponseWriter, *http.Request, string, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validAction.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+
+			io.WriteString(w, "Can't find: "+r.URL.Path)
+			return
+		}
+
+		fn(w, r, m[2], m[3])
+	}
+}
+
 func main() {
 
 	// Saying hello!
@@ -158,25 +169,29 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	srv := make(chan *http.Server, 1)
 	done := make(chan bool, 1)
-	// id := make(chan string, 1)
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	/**
 	* Create a new router and a new HTTP Server.
 	 */
-	r := mux.NewRouter()
+	router := mux.NewRouter()
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: r}
+		Handler: router}
 	srv <- server
 
-	go gracefulShutDown(sigs, srv, done /*id*/)
+	// Graceful shutdown of the server.
+	go gracefulShutDown(sigs, srv, done)
 
-	//Index page
-	r.HandleFunc("/Devices/", makeHandler(indexHandler))
-	r.HandleFunc("/Devices/{ID}", makeHandler(deviceInfoHandler))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	// Paths
+	router.HandleFunc("/Devices/", makeHandler(indexHandler))
+	router.HandleFunc("/Devices/{ID}", makeHandler(deviceInfoHandler))
+	router.HandleFunc("/Device/{ID}/power_on", actionHandler(changeState))
+	router.HandleFunc("/Device/{ID}/power_off", actionHandler(changeState))
+
+	// Stylesheets
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
 	/**
 	 * Dead code from a previous idea that I was approaching.

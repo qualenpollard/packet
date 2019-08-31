@@ -1,3 +1,4 @@
+// Package ip is contains the structs and methods for the ip address of a device
 package ip
 
 import (
@@ -11,12 +12,12 @@ import (
 	"github.com/fatih/color"
 )
 
-// DataBase ...
+// DataBase a list of Body - in regards to an IPAddress
 type DataBase struct {
 	Addresses []Body `json:"ip_addresses"`
 }
 
-// Body ...
+// Body is the information regarding an IP Address
 type Body struct {
 	ID            string            `json:"id"`
 	AddressFamily float32           `json:"address_family"`
@@ -43,7 +44,10 @@ type Body struct {
 	Type          interface{}       `json:"type"`
 }
 
-// RetrieveDeviceIPAddresses ...
+/**
+ * RetrieveDeviceIPAddresses makes a request to get the IP Addresses of a specific device.
+ * Returns DataBase - a slice of IP Body
+ */
 func RetrieveDeviceIPAddresses(c *http.Client, token, url, devID string) DataBase {
 	// Create a new request to get the Device data.
 	req, reqErr := http.NewRequest("GET", url+"/devices/"+devID+"/ips/", nil)

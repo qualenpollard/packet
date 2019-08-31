@@ -10,7 +10,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// GetPlans ...
+// GetPlans gets the plans of the project
 func GetPlans(c *http.Client, token, url string) DataBase {
 	// Create a new request to get the Plan data.
 	req, reqErr := http.NewRequest("GET", url, nil)

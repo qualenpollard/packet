@@ -41,21 +41,21 @@
                             </form>
                             
                             <li>Hostname: <i>{{.Hostname}}</i></li>
+                            <li>Pricing: ${{.Plan.Pricing.Hour}} {{.BillingCycle}}</li>
                             <li>Facility: {{.Facility.Name}}</li>
                             <li>OS: {{.OperatingSystem.Slug}}</li>
                             <li>Plan: {{.Plan.Name}}</li>
-                            <li>Pricing: ${{.Plan.Pricing.Hour}} {{.BillingCycle}}</li>
                             <li>State: <i id="state">{{.State}}</i></li>
                             
                             {{if eq .State "inactive"}}
-                            <form action="/Devices/">
-                                <input class="white-text small" id="stateInput" type="submit" value="ACTIVATE"/>
-                            </form>
+                                <form action="/Device/{{.ID}}/power_on">
+                                    <input class="white-text small" id="stateInput" type="submit" value="ACTIVATE"/>
+                                </form>
                             
-                            {{else}}
-                            <form action="/Devices/">
-                                <input class="white-text small" id="stateInput" type="submit" value="DEACTIVATE"/>
-                            </form>
+                            {{else if eq .State "active"}}
+                                <form action="/Device/{{.ID}}/power_off">
+                                    <input class="white-text small" id="stateInput" type="submit" value="DACTIVATE"/>
+                                </form>
                             {{end}}
 
                             {{end}}

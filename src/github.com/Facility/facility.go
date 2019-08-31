@@ -1,3 +1,4 @@
+// Package facility contains the structs and methods that handles the facilities of a devices
 package facility
 
 import (
@@ -10,12 +11,12 @@ import (
 	"github.com/fatih/color"
 )
 
-// DataBase ...
+// DataBase is a slice of Facility
 type DataBase struct {
 	Facilities []Facility `json:"facilities"`
 }
 
-// Facility ...
+// Facility is a struct that contains the information regarding the the facility for the device
 type Facility struct {
 	ID       string      `json:"id"`
 	Name     string      `json:"name"`
@@ -25,7 +26,10 @@ type Facility struct {
 	IPRanges []string    `json:"ip_ranges"`
 }
 
-// GetFacilities ...
+/**
+ * GetFacilities makes a request to get the facilities for the device
+ * Returns DataBase - a slice of Facility
+ */
 func GetFacilities(c *http.Client, token, url string) DataBase {
 	// Create a new request to get the Facility data.
 	req, reqErr := http.NewRequest("GET", url, nil)

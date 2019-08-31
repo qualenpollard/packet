@@ -1,3 +1,4 @@
+// Package device is the package that contains the structs and methods for the devices of a project
 package device
 
 import (
@@ -7,12 +8,12 @@ import (
 	"github.com/plan"
 )
 
-// DataBase ...
+// DataBase a slice of Device
 type DataBase struct {
 	Devices []Device `json:"devices"`
 }
 
-// Device ...
+// Device the struct that contains the information about a Device
 type Device struct {
 	ID                    string                   `json:"id"`
 	Facility              facility.Facility        `json:"facility"`
